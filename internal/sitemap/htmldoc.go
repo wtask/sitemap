@@ -89,7 +89,9 @@ func href(node *html.Node) string {
 
 func collectLinks(node *html.Node, links []string) []string {
 	if node.Type == html.ElementNode && node.Data == "a" {
-		links = append(links, href(node))
+		if link := href(node); link != "" {
+			links = append(links, link)
+		}
 	}
 	for n := node.FirstChild; n != nil; n = n.NextSibling {
 		links = collectLinks(n, links)
