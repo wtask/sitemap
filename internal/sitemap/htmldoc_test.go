@@ -89,7 +89,7 @@ func Test_findNode(t *testing.T) {
 	}
 }
 
-func Test_href(t *testing.T) {
+func Test_attribute(t *testing.T) {
 	content := `
 	<head>
 		<base href="http://host/path/">
@@ -109,7 +109,7 @@ func Test_href(t *testing.T) {
 		t.Fatal("<base> node not found")
 	}
 	expected := "http://host/path/"
-	if link := href(base); link != expected {
+	if link := attribute("href", base); link != expected {
 		t.Errorf("Expected %q for href value of <base> node, got %q", expected, link)
 	}
 	title := findFirstNode(head, "title")
@@ -117,7 +117,7 @@ func Test_href(t *testing.T) {
 		t.Fatal("<title> node not found")
 	}
 	expected = ""
-	if link := href(title); link != expected {
+	if link := attribute("href", title); link != expected {
 		t.Errorf("Expected %q for href value of <title> node, got %q", expected, link)
 	}
 }
@@ -139,6 +139,7 @@ func Test_collectLinks(t *testing.T) {
 		<a href="http://host/main.html">Home page</a>
 		<p>Text paragraph, see <a href="/details.php">details</a>
 		</p>
+		<a>Invalid anchor</a>
 	</body>
 	</html>	
 	`

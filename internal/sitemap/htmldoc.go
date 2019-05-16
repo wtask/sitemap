@@ -78,9 +78,9 @@ func findFirstNode(doc *html.Node, node string) *html.Node {
 	return nil
 }
 
-func href(node *html.Node) string {
+func attribute(name string, node *html.Node) string {
 	for _, attr := range node.Attr {
-		if attr.Key == "href" {
+		if attr.Key == name {
 			return attr.Val
 		}
 	}
@@ -89,7 +89,7 @@ func href(node *html.Node) string {
 
 func collectLinks(node *html.Node, links []string) []string {
 	if node.Type == html.ElementNode && node.Data == "a" {
-		if link := href(node); link != "" {
+		if link := attribute("href", node); link != "" {
 			links = append(links, link)
 		}
 	}
