@@ -1,8 +1,8 @@
-package uri
+package sitemap
 
 import "testing"
 
-func TestFromString(t *testing.T) {
+func TestNewURI(t *testing.T) {
 	cases := []struct {
 		rawURL string
 		valid  bool
@@ -23,7 +23,7 @@ func TestFromString(t *testing.T) {
 		{"http://localhost/cool search/?q=text", true, "http://localhost/cool%20search/?q=text"},
 	}
 	for _, c := range cases {
-		u, err := FromString(c.rawURL)
+		u, err := NewURI(c.rawURL)
 		if err != nil && c.valid {
 			t.Errorf("Unexpected error %q for %q", err, c.rawURL)
 		}

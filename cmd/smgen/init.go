@@ -4,12 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
+
+	"github.com/wtask/sitemap/internal/sitemap"
 )
 
 var (
-	startURL             *url.URL
+	startURL             *sitemap.URI
 	outputFile           string
 	numWorkers, maxDepth int
 )
@@ -47,7 +48,7 @@ func init() {
 		os.Exit(1)
 	}
 	var err error
-	startURL, err = url.ParseRequestURI(start)
+	startURL, err = sitemap.NewURI(start)
 	if err != nil {
 		fmt.Fprintf(flag.CommandLine.Output(), "Error: %v.\n\n", err)
 		printUsage(flag.CommandLine.Output())
