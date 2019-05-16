@@ -115,19 +115,6 @@ type Result struct {
 	found <-chan Link // канал результатов генератора
 }
 
-func process(workersLimit int, queue <-chan Job) {
-	// не понятно использовать группу или нет
-	// var wg sync.WaitGroup
-	// r := make(chan Result, workersLimit)
-	// pool := make(chan Job, workersLimit)
-	// for j := range queue {
-	// 	// pool <- j
-	// 	// select {
-	// 	// case j:= <-pool:
-	// 	// }
-	// }
-}
-
 func worker(j Job) Result {
 	time.Sleep(1 * time.Second)
 	found := make(chan Link) // TODO можно использовать буферизованный

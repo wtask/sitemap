@@ -15,7 +15,12 @@ type documentMetadata struct {
 
 type taskResult struct {
 	task
-	docMeta *documentMetadata
-	errors  <-chan error
-	found   <-chan *URI
+	err error
+	meta     *documentMetadata // task document metadata
+	// errors <-chan error
+	found <-chan *task
 }
+
+// func worker(t task, depth uint) taskResult {
+// 	found := make(chan *task)
+// }

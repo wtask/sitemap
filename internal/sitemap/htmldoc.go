@@ -65,3 +65,34 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *documentMetada
 
 	return doc, meta, err
 }
+
+func findFirstNode(doc *html.Node, node string) *html.Node {
+	if doc.Type == html.ElementNode && doc.Data == node {
+		return doc
+	}
+	for n := doc.FirstChild; n != nil; n = n.NextSibling {
+		if r := findFirstNode(n, node); r != nil {
+			return r
+		}
+	}
+	return nil
+}
+
+func href(node *html.Node) string {
+	for _, attr := range node.Attr {
+		if attr.Key == "href" {
+			return attr.Val
+		}
+	}
+	return ""
+}
+
+func collectLinks(node *html.Node, links []string) []string {
+	if node.Type == html.ElementNode && node.Data == "a" {
+		links = append(links, href(node))
+	}
+	for n := node.FirstChild; n != nil; n = n.NextSibling {
+		links = collectLinks(n, links)
+	}
+	return links
+}

@@ -3,6 +3,7 @@ package sitemap
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -11,10 +12,10 @@ type Parser struct {
 	сtx            *context.Context // optional
 	errors         chan<- error     // optional
 	requestTimeout time.Duration    // optional
-	queueLen       int
+	queueLen       uint
 }
 
-const defaultQueueLen = 1000
+const defaultQueueLen uint = 1000
 
 type parserOption func(*Parser) error
 
@@ -75,6 +76,29 @@ func NewParser(options ...parserOption) (*Parser, error) {
 	return p, nil
 }
 
-func (p Parser) Parse(root *URI, depth, workers int) []*URI {
+func (p Parser) Parse(root *URI, depth, workers uint) []*URI {
+	if p.queueLen == 0 {
+		p.queueLen = defaultQueueLen
+	}
+	queue := make(chan task, p.queueLen)
+	// found := sync.Map{}
+	var totalWorkers int64
+
+	queue <- task{root, 0}
+	for done := false; !done; {
+
+		if atomic.LoadInt64(&totalWorkers) < int64(workers) && len(queue) > 0 {
+			// start workers
+			for t := range queue {
+				atomic.AddInt64(&totalWorkers, 1)
+				go func(t task) {
+					defer func() { atomic.AddInt64(&totalWorkers, -1) }()
+
+				}(t)
+
+			}
+		}
+	}
+
 	return nil
 }
