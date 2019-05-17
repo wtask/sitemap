@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Parser - repsent type to explore and build site map.
+// Parser - represent type to explore and build site map.
 type Parser struct {
 	errorCh        chan<- error  // optional
 	requestTimeout time.Duration // optional
@@ -18,8 +18,10 @@ type Parser struct {
 }
 
 const (
+	// DefaultNumWorkers - default num of goroutines which fetchs and parses html documents.
 	DefaultNumWorkers uint = 4
-	DefaultQueueCap   uint = 1000
+	// DefaultQueueCap - default capacity of internal queue.
+	DefaultQueueCap uint = 1000
 )
 
 type parserOption func(*Parser) error
