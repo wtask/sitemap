@@ -15,5 +15,11 @@ func main() {
 	}
 
 	m := parser.Parse(startURL, depth, numWorkers)
-	fmt.Println(m)
+	for _, item := range m {
+		fmt.Println(item.URI.String())
+		if item.DocumentMetadata != nil && item.DocumentMetadata.Modified != nil {
+			fmt.Println(*item.DocumentMetadata.Modified)
+		}
+		fmt.Println()
+	}
 }

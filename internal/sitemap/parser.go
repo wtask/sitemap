@@ -3,6 +3,7 @@ package sitemap
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -203,9 +204,11 @@ func (p *Parser) worker(root *URI, depth uint, t Target) completedTarget {
 				continue
 			}
 			if root.Scheme != link.Scheme ||
-				root.User.String() != link.User.String() ||
 				root.Hostname() != link.Hostname() ||
-				!strings.HasPrefix(link.EscapedPath(), root.EscapedPath()) {
+				!strings.HasPrefix(
+					path.Dir(link.EscapedPath()),
+					path.Dir(root.EscapedPath()),
+				) {
 				// TODO Make more reliable verification for nested targets
 				// Add method to URI
 				continue

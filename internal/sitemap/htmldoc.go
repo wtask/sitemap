@@ -59,13 +59,17 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMetada
 	}
 
 	var modified *time.Time
-	t, err := http.ParseTime(resp.Header.Get("Last-Modified"))
-	if err != nil {
+	dt := resp.Header.Get("Last-Modified")
+	if dt == "" {
+		dt = resp.Header.Get("Date")
+	}
+	if t, err := http.ParseTime(dt); err == nil {
 		modified = &t
 	}
 	meta := &DocumentMetadata{
 		Modified: modified,
 	}
+
 	doc, err := html.Parse(utf8)
 
 	return doc, meta, err
