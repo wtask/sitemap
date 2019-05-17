@@ -45,6 +45,9 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMetada
 		return nil, nil, fmt.Errorf("cannot fetch %s, status code: %d", url, resp.StatusCode)
 	}
 
+	// TODO Need to check final URI from response: resp.Request.URL.String()
+	// If redirect was occurred we get different URL and we have to deal with this situation.
+
 	ctype := resp.Header.Get("Content-Type")
 	if !strings.Contains(ctype, "text/html") {
 		return nil, nil, fmt.Errorf("%s, invalid content type: %q", url, ctype)

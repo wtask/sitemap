@@ -7,8 +7,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/net/html"
 )
 
 // Parser - repsent type to explore and build site map.
@@ -89,17 +87,17 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 	pending := make(chan (<-chan Target), workers)
 	results := sync.Map{}
 
-	var numWorkers int64
+	num := struct{ workers, fillers int64 }{0, 0} // goroutines counters
+
 	ensureWorkers := func() {
-		if len(queue) == 0 {
-			return
-		}
-		for i := atomic.LoadInt64(&numWorkers); i < int64(workers); i++ {
+		for i := atomic.LoadInt64(&num.workers); i < int64(workers); i++ {
 			select {
 			case target := <-queue:
-				atomic.AddInt64(&numWorkers, 1)
+				atomic.AddInt64(&num.workers, 1)
 				go func() {
-					defer func() { atomic.AddInt64(&numWorkers, -1) }()
+					defer func() {
+						atomic.AddInt64(&num.workers, -1)
+					}()
 					completed := p.worker(root, depth, target)
 					if completed.err != nil && p.errorCh != nil {
 						// TODO send error to parser errors channel
@@ -108,7 +106,9 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 						completed.Target.URI.String(),
 						MapItem{completed.Target, completed.meta},
 					)
-					pending <- completed.targets
+					if completed.targets != nil {
+						pending <- completed.targets
+					}
 				}()
 			default:
 				return
@@ -116,23 +116,36 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 		}
 	}
 
-	queue <- Target{root, 0}
-	for done := false; !done; {
-		ensureWorkers()
-
+	ensureFillers := func() {
 		select {
 		// fill the queue when there are pending targets
 		case targets := <-pending:
+			atomic.AddInt64(&num.fillers, 1)
 			go func() {
+				defer func() {
+					atomic.AddInt64(&num.fillers, -1)
+				}()
 				for t := range targets {
 					queue <- t
 				}
 			}()
 		default:
-			//do not block main loop
 		}
+	}
 
-		done = len(queue) == 0 && len(pending) == 0 && atomic.LoadInt64(&numWorkers) == 0
+	queue <- Target{root, 0}
+	for {
+		// main loop
+		ensureWorkers()
+		ensureFillers()
+
+		if len(queue) == 0 &&
+			len(pending) == 0 &&
+			atomic.LoadInt64(&num.workers) == 0 &&
+			atomic.LoadInt64(&num.fillers) == 0 {
+			// all done
+			break
+		}
 	}
 
 	found := []MapItem{}
@@ -146,37 +159,35 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 	return found
 }
 
+// worker - fetches and parses target document.
+// Arguments `root` and `depth` are required to build absolute URI properly.
 func (p *Parser) worker(root *URI, depth uint, t Target) completedTarget {
-
 	doc, meta, err := fetchDocument(t.URI, p.requestTimeout)
 
-	targets := make(chan Target)
 	result := completedTarget{
 		Target:  t,
 		err:     err,
 		meta:    meta,
-		targets: targets,
+		targets: nil,
 	}
 
-	var (
-		base *URI
-		body *html.Node
-	)
-
-	if t.Level <= depth+1 {
-		// parse document only on depth+1 level
-		base, _ = NewURI(
-			attribute("href", findFirstNode("base", findFirstNode("head", doc))),
-		)
-		body = findFirstNode("body", doc)
+	if t.Level >= depth {
+		// stop parsing
+		return result
 	}
 
-	// start link generator in background
+	targets := make(chan Target)
+	result.targets = targets
+
 	go func() {
 		defer close(targets)
+		body := findFirstNode("body", doc)
 		if body == nil {
 			return
 		}
+		base, _ := NewURI(
+			attribute("href", findFirstNode("base", findFirstNode("head", doc))),
+		)
 		for _, href := range collectAttributes("a", "href", body, nil) {
 			var url *url.URL
 			if base != nil {
