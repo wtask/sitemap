@@ -47,8 +47,8 @@ func TestParser_worker(t *testing.T) {
 
 func ExampleParser_Parse() {
 	// This test example allows you not to sort the results.
-	// Otherwise we need to prepend server.URL to expected results.
-	// and sort both expected and actual sitemap before compare.
+	// Otherwise we need to prepend server.URL into expected results
+	// and to sort both expected and actual sitemap before compare.
 
 	server := httptest.NewServer(http.FileServer(http.Dir("testdata/simplesite")))
 	defer server.Close()
