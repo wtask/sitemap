@@ -54,7 +54,7 @@ func Test_fetchDocument(t *testing.T) {
 	}
 }
 
-func Test_findNode(t *testing.T) {
+func Test_findFirestNode(t *testing.T) {
 	content := `
 	<!doctype html>
 
@@ -74,17 +74,17 @@ func Test_findNode(t *testing.T) {
 	`
 
 	doc, _ := html.Parse(bytes.NewReader([]byte(content)))
-	head := findFirstNode(doc, "head")
+	head := findFirstNode("head", doc)
 	if head == nil {
 		t.Fatal("<head> node not found")
 	}
-	if base := findFirstNode(head, "base"); base == nil {
+	if base := findFirstNode("base", head); base == nil {
 		t.Error("<base> node not found")
 	}
-	if style := findFirstNode(head, "style"); style != nil {
+	if style := findFirstNode("style", head); style != nil {
 		t.Error("found nonexistent <style> node")
 	}
-	if h1 := findFirstNode(doc, "h1"); h1 == nil {
+	if h1 := findFirstNode("h1", doc); h1 == nil {
 		t.Error("<h1> node not found")
 	}
 }
@@ -100,11 +100,11 @@ func Test_attribute(t *testing.T) {
 	</head>
 	`
 	doc, _ := html.Parse(bytes.NewReader([]byte(content)))
-	head := findFirstNode(doc, "head")
+	head := findFirstNode("head", doc)
 	if head == nil {
 		t.Fatal("<head> node not found")
 	}
-	base := findFirstNode(head, "base")
+	base := findFirstNode("base", head)
 	if base == nil {
 		t.Fatal("<base> node not found")
 	}
@@ -112,7 +112,7 @@ func Test_attribute(t *testing.T) {
 	if link := attribute("href", base); link != expected {
 		t.Errorf("Expected %q for href value of <base> node, got %q", expected, link)
 	}
-	title := findFirstNode(head, "title")
+	title := findFirstNode("title", head)
 	if title == nil {
 		t.Fatal("<title> node not found")
 	}
@@ -122,7 +122,7 @@ func Test_attribute(t *testing.T) {
 	}
 }
 
-func Test_collectLinks(t *testing.T) {
+func Test_collectAttributes(t *testing.T) {
 	content := `
 	<!doctype html>
 
@@ -144,16 +144,30 @@ func Test_collectLinks(t *testing.T) {
 	</html>	
 	`
 	doc, _ := html.Parse(bytes.NewReader([]byte(content)))
-	body := findFirstNode(doc, "body")
+
+	head := findFirstNode("head", doc)
+	if head == nil {
+		t.Fatal("<head> node not found")
+	}
+	names := collectAttributes("meta", "name", head, nil)
+	if len(names) != 2 {
+		t.Error("Unexpected names num:", len(names))
+	}
+	expected := []string{"description", "author"}
+	if !reflect.DeepEqual(names, expected) {
+		t.Error("Expected names:", expected, "got:", names)
+	}
+
+	body := findFirstNode("body", doc)
 	if body == nil {
 		t.Fatal("<body> node not found")
 	}
-
-	links := collectLinks(body, nil)
+	links := collectAttributes("a", "href", body, nil)
 	if len(links) != 2 {
 		t.Error("Unexpected links num:", len(links))
 	}
-	if !reflect.DeepEqual(links, []string{"http://host/main.html", "/details.php"}) {
-		t.Error("Unexpected links:", links)
+	expected = []string{"http://host/main.html", "/details.php"}
+	if !reflect.DeepEqual(links, expected) {
+		t.Error("Expected links:", expected, "got:", links)
 	}
 }

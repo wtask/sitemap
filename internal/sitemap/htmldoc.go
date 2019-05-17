@@ -66,35 +66,41 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *documentMetada
 	return doc, meta, err
 }
 
-func findFirstNode(doc *html.Node, node string) *html.Node {
-	if doc.Type == html.ElementNode && doc.Data == node {
-		return doc
+// findFirstNode - parses elements tree to find first node for given tag.
+// Returns nil if node for tag is not found.
+func findFirstNode(tag string, tree *html.Node) *html.Node {
+	if tree.Type == html.ElementNode && tree.Data == tag {
+		return tree
 	}
-	for n := doc.FirstChild; n != nil; n = n.NextSibling {
-		if r := findFirstNode(n, node); r != nil {
-			return r
+	for n := tree.FirstChild; n != nil; n = n.NextSibling {
+		if node := findFirstNode(tag, n); node != nil {
+			return node
 		}
 	}
 	return nil
 }
 
-func attribute(name string, node *html.Node) string {
-	for _, attr := range node.Attr {
-		if attr.Key == name {
-			return attr.Val
+// attribute - returns value of given attribute name for single document element.
+// Returns empty string if attribute is not found.
+func attribute(name string, element *html.Node) string {
+	for _, a := range element.Attr {
+		if a.Key == name {
+			return a.Val
 		}
 	}
 	return ""
 }
 
-func collectLinks(node *html.Node, links []string) []string {
-	if node.Type == html.ElementNode && node.Data == "a" {
-		if link := attribute("href", node); link != "" {
-			links = append(links, link)
+// collectAttributes - parses elements tree and collects all attributes values for given tag.
+// You can pass nil for values, but always check length of results.
+func collectAttributes(tag, attr string, tree *html.Node, values []string) []string {
+	if tree.Type == html.ElementNode && tree.Data == tag {
+		if v := attribute(attr, tree); v != "" {
+			values = append(values, v)
 		}
 	}
-	for n := node.FirstChild; n != nil; n = n.NextSibling {
-		links = collectLinks(n, links)
+	for n := tree.FirstChild; n != nil; n = n.NextSibling {
+		values = collectAttributes(tag, attr, n, values)
 	}
-	return links
+	return values
 }
