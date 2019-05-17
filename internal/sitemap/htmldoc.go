@@ -12,6 +12,8 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
+// fetchDocument - build http GET request, fetch response body abd parse given HTML into document tree.
+// Only "text/html" content type is fetched.
 func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *documentMetadata, error) {
 	var cancel context.CancelFunc
 	defer func() {
