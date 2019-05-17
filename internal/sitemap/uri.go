@@ -1,6 +1,7 @@
 package sitemap
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 )
@@ -13,6 +14,9 @@ type URI struct {
 // 	- string does not contain allowed scheme (http or https)
 // 	- string does not contain hostname
 func NewURI(raw string) (*URI, error) {
+	if raw == "" {
+		return nil, errors.New("sitemap.NewURI(): unable to build URI from empty string")
+	}
 	u, err := url.ParseRequestURI(raw)
 	if err != nil {
 		return nil, err

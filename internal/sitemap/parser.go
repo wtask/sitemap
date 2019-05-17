@@ -1,21 +1,27 @@
 package sitemap
 
 import (
-	"context"
 	"fmt"
+	"net/url"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/net/html"
 )
 
 // Parser - repsent type to explore and build site map.
 type Parser struct {
-	сtx            *context.Context // optional
-	errors         chan<- error     // optional
-	requestTimeout time.Duration    // optional
-	queueLen       uint
+	errorCh        chan<- error  // optional
+	requestTimeout time.Duration // optional
+	queueCap       uint
 }
 
-const defaultQueueLen uint = 1000
+const (
+	DefaultNumWorkers uint = 4
+	DefaultQueueCap   uint = 1000
+)
 
 type parserOption func(*Parser) error
 
@@ -40,18 +46,10 @@ func (p *Parser) setup(options ...parserOption) error {
 	return nil
 }
 
-// WithContext - add optional context to Parser to allow cancellation.
-func WithContext(ctx context.Context) parserOption {
-	return func(p *Parser) error {
-		p.сtx = &ctx
-		return nil
-	}
-}
-
 // WithErrorChannel - add optional channel to send there parsing errors.
-func WithErrorChannel(errors chan<- error) parserOption {
+func WithErrorChannel(errorCh chan<- error) parserOption {
 	return func(p *Parser) error {
-		p.errors = errors
+		p.errorCh = errorCh
 		return nil
 	}
 }
@@ -69,36 +67,141 @@ func WithRequestTimeout(timeout time.Duration) parserOption {
 
 // NewParser - create Parser instance with optional features.
 func NewParser(options ...parserOption) (*Parser, error) {
-	p := &Parser{queueLen: defaultQueueLen}
+	p := &Parser{queueCap: DefaultQueueCap}
 	if err := p.setup(options...); err != nil {
 		return nil, err
 	}
 	return p, nil
 }
 
-func (p Parser) Parse(root *URI, depth, workers uint) []*URI {
-	if p.queueLen == 0 {
-		p.queueLen = defaultQueueLen
+// Parse - takes root URI and max depth to parse all html documents available from root.
+// TODO Add support to cancel parsing with help of context.Context
+func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
+	// TODO resolve p == nil case
+	if workers == 0 {
+		// or panic?
+		workers = DefaultNumWorkers
 	}
-	queue := make(chan task, p.queueLen)
-	// found := sync.Map{}
-	var totalWorkers int64
+	if p.queueCap == 0 {
+		p.queueCap = DefaultQueueCap
+	}
+	queue := make(chan Target, p.queueCap)
+	pending := make(chan (<-chan Target), workers)
+	results := sync.Map{}
 
-	queue <- task{root, 0}
-	for done := false; !done; {
-
-		if atomic.LoadInt64(&totalWorkers) < int64(workers) && len(queue) > 0 {
-			// start workers
-			for t := range queue {
-				atomic.AddInt64(&totalWorkers, 1)
-				go func(t task) {
-					defer func() { atomic.AddInt64(&totalWorkers, -1) }()
-
-				}(t)
-
+	var numWorkers int64
+	ensureWorkers := func() {
+		if len(queue) == 0 {
+			return
+		}
+		for i := atomic.LoadInt64(&numWorkers); i < int64(workers); i++ {
+			select {
+			case target := <-queue:
+				atomic.AddInt64(&numWorkers, 1)
+				go func() {
+					defer func() { atomic.AddInt64(&numWorkers, -1) }()
+					completed := p.worker(root, depth, target)
+					if completed.err != nil && p.errorCh != nil {
+						// TODO send error to parser errors channel
+					}
+					results.LoadOrStore(
+						completed.Target.URI.String(),
+						MapItem{completed.Target, completed.meta},
+					)
+					pending <- completed.targets
+				}()
+			default:
+				return
 			}
 		}
 	}
 
-	return nil
+	queue <- Target{root, 0}
+	for done := false; !done; {
+		ensureWorkers()
+
+		select {
+		// fill the queue when there are pending targets
+		case targets := <-pending:
+			go func() {
+				for t := range targets {
+					queue <- t
+				}
+			}()
+		default:
+			//do not block main loop
+		}
+
+		done = len(queue) == 0 && len(pending) == 0 && atomic.LoadInt64(&numWorkers) == 0
+	}
+
+	found := []MapItem{}
+	results.Range(func(_ interface{}, value interface{}) bool {
+		if item, ok := value.(MapItem); ok {
+			found = append(found, item)
+		}
+		return true
+	})
+
+	return found
+}
+
+func (p *Parser) worker(root *URI, depth uint, t Target) completedTarget {
+
+	doc, meta, err := fetchDocument(t.URI, p.requestTimeout)
+
+	targets := make(chan Target)
+	result := completedTarget{
+		Target:  t,
+		err:     err,
+		meta:    meta,
+		targets: targets,
+	}
+
+	var (
+		base *URI
+		body *html.Node
+	)
+
+	if t.Level <= depth+1 {
+		// parse document only on depth+1 level
+		base, _ = NewURI(
+			attribute("href", findFirstNode("base", findFirstNode("head", doc))),
+		)
+		body = findFirstNode("body", doc)
+	}
+
+	// start link generator in background
+	go func() {
+		defer close(targets)
+		if body == nil {
+			return
+		}
+		for _, href := range collectAttributes("a", "href", body, nil) {
+			var url *url.URL
+			if base != nil {
+				url, _ = base.Parse(href)
+			} else {
+				url, _ = root.Parse(href)
+			}
+			if url == nil {
+				continue
+			}
+			link, _ := NewURI(url.String())
+			if err != nil {
+				continue
+			}
+			if root.Scheme != link.Scheme ||
+				root.User.String() != link.User.String() ||
+				root.Hostname() != link.Hostname() ||
+				!strings.HasPrefix(link.EscapedPath(), root.EscapedPath()) {
+				// TODO Make more reliable verification for nested targets
+				// Add method to URI
+				continue
+			}
+			targets <- Target{link, t.Level + 1}
+		}
+	}()
+
+	return result
 }

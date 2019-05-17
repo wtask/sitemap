@@ -34,14 +34,6 @@ func mapper(root string, depth, workerLimit int) {
 		return p
 	}()
 
-	// go func(q <-chan Job, p chan<- Job) {
-	// 	// наполняем пул задачами
-	// 	for j := range q {
-	// 		// j != nil контролирует range
-	// 		p <- j // отправка блокируется, если p заполнен
-	// 	}
-	// }(queue, pool)
-
 	var goroutines int32
 	wg := sync.WaitGroup{}
 

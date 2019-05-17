@@ -31,23 +31,29 @@ func Test_fetchDocument(t *testing.T) {
 	for _, c := range cases {
 		uri, _ := NewURI(server.URL + c.path)
 		t.Log(uri.String())
-		doc, _, err := fetchDocument(uri, 0)
+		doc, meta, err := fetchDocument(uri, 0)
 		switch {
 		case err != nil:
 			if c.errMsg == "" {
 				t.Error(c.path, "unexpected error:", err)
 			} else if !strings.Contains(err.Error(), c.errMsg) {
-				t.Error(c.path, "expected error contains:", c.errMsg, "got error:", err)
+				t.Error(c.path, "expected error contain:", c.errMsg, "got error:", err)
 			}
 			if doc != nil {
-				t.Error("got non-nil document along with error")
+				t.Error("Got non-nil document along error")
+			}
+			if meta != nil {
+				t.Error("Got non-nil document metadata along error:", *meta)
 			}
 		case err == nil:
 			if c.errMsg != "" {
-				t.Error("expected error contains:", c.errMsg, "got error: nil")
+				t.Error("expected error contain:", c.errMsg, "got error: nil")
 			}
 			if doc == nil {
-				t.Error("got nil document without error")
+				t.Error("Got nil document without error")
+			}
+			if meta == nil {
+				t.Error("Got nil document metadata without error")
 			}
 		}
 
@@ -87,6 +93,11 @@ func Test_findFirestNode(t *testing.T) {
 	if h1 := findFirstNode("h1", doc); h1 == nil {
 		t.Error("<h1> node not found")
 	}
+
+	nothing := findFirstNode("body", nil)
+	if nothing != nil {
+		t.Error("Found document tree or element for nil")
+	}
 }
 
 func Test_attribute(t *testing.T) {
@@ -120,6 +131,11 @@ func Test_attribute(t *testing.T) {
 	if link := attribute("href", title); link != expected {
 		t.Errorf("Expected %q for href value of <title> node, got %q", expected, link)
 	}
+
+	nothing := attribute("src", nil)
+	if nothing != "" {
+		t.Error("Got non-empty value for nil element:", nothing)
+	}
 }
 
 func Test_collectAttributes(t *testing.T) {
@@ -151,7 +167,7 @@ func Test_collectAttributes(t *testing.T) {
 	}
 	names := collectAttributes("meta", "name", head, nil)
 	if len(names) != 2 {
-		t.Error("Unexpected names num:", len(names))
+		t.Error("Unexpected num of names:", len(names))
 	}
 	expected := []string{"description", "author"}
 	if !reflect.DeepEqual(names, expected) {
@@ -164,10 +180,15 @@ func Test_collectAttributes(t *testing.T) {
 	}
 	links := collectAttributes("a", "href", body, nil)
 	if len(links) != 2 {
-		t.Error("Unexpected links num:", len(links))
+		t.Error("Unexpected num of links:", len(links))
 	}
 	expected = []string{"http://host/main.html", "/details.php"}
 	if !reflect.DeepEqual(links, expected) {
 		t.Error("Expected links:", expected, "got:", links)
+	}
+
+	nothing := collectAttributes("img", "scr", nil, nil)
+	if nothing != nil || len(nothing) != 0 {
+		t.Error("Unexpected non-empty collection for nil tree:", nothing)
 	}
 }

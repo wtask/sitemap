@@ -14,7 +14,7 @@ import (
 
 // fetchDocument - build http GET request, fetch response body abd parse given HTML into document tree.
 // Only "text/html" content type is fetched.
-func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *documentMetadata, error) {
+func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMetadata, error) {
 	var cancel context.CancelFunc
 	defer func() {
 		if cancel != nil {
@@ -60,8 +60,8 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *documentMetada
 	if err != nil {
 		modified = &t
 	}
-	meta := &documentMetadata{
-		modified: modified,
+	meta := &DocumentMetadata{
+		Modified: modified,
 	}
 	doc, err := html.Parse(utf8)
 
@@ -71,6 +71,9 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *documentMetada
 // findFirstNode - parses elements tree to find first node for given tag.
 // Returns nil if node for tag is not found.
 func findFirstNode(tag string, tree *html.Node) *html.Node {
+	if tree == nil {
+		return nil
+	}
 	if tree.Type == html.ElementNode && tree.Data == tag {
 		return tree
 	}
@@ -85,6 +88,9 @@ func findFirstNode(tag string, tree *html.Node) *html.Node {
 // attribute - returns value of given attribute name for single document element.
 // Returns empty string if attribute is not found.
 func attribute(name string, element *html.Node) string {
+	if element == nil {
+		return ""
+	}
 	for _, a := range element.Attr {
 		if a.Key == name {
 			return a.Val
@@ -96,6 +102,9 @@ func attribute(name string, element *html.Node) string {
 // collectAttributes - parses elements tree and collects all attributes values for given tag.
 // You can pass nil for values, but always check length of results.
 func collectAttributes(tag, attr string, tree *html.Node, values []string) []string {
+	if tree == nil {
+		return values
+	}
 	if tree.Type == html.ElementNode && tree.Data == tag {
 		if v := attribute(attr, tree); v != "" {
 			values = append(values, v)
