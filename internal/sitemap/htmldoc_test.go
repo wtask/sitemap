@@ -60,7 +60,7 @@ func Test_fetchDocument(t *testing.T) {
 	}
 }
 
-func Test_findFirestNode(t *testing.T) {
+func Test_findFirstNode(t *testing.T) {
 	content := `
 	<!doctype html>
 
