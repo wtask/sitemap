@@ -75,9 +75,9 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMetada
 	return doc, meta, err
 }
 
-// findFirstNode - parses elements tree to find first node for given tag.
+// firstNode - parses elements tree to find first node for given tag.
 // Returns nil if node for tag is not found.
-func findFirstNode(tag string, tree *html.Node) *html.Node {
+func firstNode(tag string, tree *html.Node) *html.Node {
 	if tree == nil {
 		return nil
 	}
@@ -85,7 +85,7 @@ func findFirstNode(tag string, tree *html.Node) *html.Node {
 		return tree
 	}
 	for n := tree.FirstChild; n != nil; n = n.NextSibling {
-		if node := findFirstNode(tag, n); node != nil {
+		if node := firstNode(tag, n); node != nil {
 			return node
 		}
 	}

@@ -184,12 +184,12 @@ func (p *Parser) worker(root *URI, depth uint, t Target) completedTarget {
 
 	go func() {
 		defer close(targets)
-		body := findFirstNode("body", doc)
+		body := firstNode("body", doc)
 		if body == nil {
 			return
 		}
 		base, _ := NewURI(
-			attribute("href", findFirstNode("base", findFirstNode("head", doc))),
+			attribute("href", firstNode("base", firstNode("head", doc))),
 		)
 		for _, href := range collectAttributes("a", "href", body, nil) {
 			var url *url.URL

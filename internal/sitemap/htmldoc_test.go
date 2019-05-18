@@ -60,7 +60,7 @@ func Test_fetchDocument(t *testing.T) {
 	}
 }
 
-func Test_findFirstNode(t *testing.T) {
+func Test_firstNode(t *testing.T) {
 	content := `
 	<!doctype html>
 
@@ -80,21 +80,21 @@ func Test_findFirstNode(t *testing.T) {
 	`
 
 	doc, _ := html.Parse(bytes.NewReader([]byte(content)))
-	head := findFirstNode("head", doc)
+	head := firstNode("head", doc)
 	if head == nil {
 		t.Fatal("<head> node not found")
 	}
-	if base := findFirstNode("base", head); base == nil {
+	if base := firstNode("base", head); base == nil {
 		t.Error("<base> node not found")
 	}
-	if style := findFirstNode("style", head); style != nil {
+	if style := firstNode("style", head); style != nil {
 		t.Error("found nonexistent <style> node")
 	}
-	if h1 := findFirstNode("h1", doc); h1 == nil {
+	if h1 := firstNode("h1", doc); h1 == nil {
 		t.Error("<h1> node not found")
 	}
 
-	nothing := findFirstNode("body", nil)
+	nothing := firstNode("body", nil)
 	if nothing != nil {
 		t.Error("Found document tree or element for nil")
 	}
@@ -111,11 +111,11 @@ func Test_attribute(t *testing.T) {
 	</head>
 	`
 	doc, _ := html.Parse(bytes.NewReader([]byte(content)))
-	head := findFirstNode("head", doc)
+	head := firstNode("head", doc)
 	if head == nil {
 		t.Fatal("<head> node not found")
 	}
-	base := findFirstNode("base", head)
+	base := firstNode("base", head)
 	if base == nil {
 		t.Fatal("<base> node not found")
 	}
@@ -123,7 +123,7 @@ func Test_attribute(t *testing.T) {
 	if link := attribute("href", base); link != expected {
 		t.Errorf("Expected %q for href value of <base> node, got %q", expected, link)
 	}
-	title := findFirstNode("title", head)
+	title := firstNode("title", head)
 	if title == nil {
 		t.Fatal("<title> node not found")
 	}
@@ -161,7 +161,7 @@ func Test_collectAttributes(t *testing.T) {
 	`
 	doc, _ := html.Parse(bytes.NewReader([]byte(content)))
 
-	head := findFirstNode("head", doc)
+	head := firstNode("head", doc)
 	if head == nil {
 		t.Fatal("<head> node not found")
 	}
@@ -174,7 +174,7 @@ func Test_collectAttributes(t *testing.T) {
 		t.Error("Expected names:", expected, "got:", names)
 	}
 
-	body := findFirstNode("body", doc)
+	body := firstNode("body", doc)
 	if body == nil {
 		t.Fatal("<body> node not found")
 	}
