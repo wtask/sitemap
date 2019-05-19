@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/net/html"
 )
@@ -190,5 +191,70 @@ func Test_collectAttributes(t *testing.T) {
 	nothing := collectAttributes("img", "scr", nil, nil)
 	if nothing != nil || len(nothing) != 0 {
 		t.Error("Unexpected non-empty collection for nil tree:", nothing)
+	}
+}
+
+func Test_modifiedTime(test *testing.T) {
+	type header struct {
+		name, value string
+	}
+	tzone := func(tz string) *time.Location {
+		l, _ := time.LoadLocation(tz)
+		return l
+	}
+	cases := []struct {
+		h        []header
+		expected time.Time
+	}{
+		{[]header{{"", ""}}, time.Time{}},
+		{[]header{{"Last-Modified", ""}}, time.Time{}},
+		// NOTE
+		// "Date" header introduces http-message generation time, not document modification time,
+		// but we still use it
+		{[]header{{"Date", ""}}, time.Time{}},
+		{[]header{{"Last-Modified", ""}, {"Date", ""}}, time.Time{}},
+		{[]header{{"Last-Modified", "Wed, 21 Oct"}, {"Date", ""}}, time.Time{}},
+		{[]header{{"Last-Modified", "Wed, 21 Oct 2015 07:28:00 MSK"}, {"Date", ""}}, time.Time{}},
+		{[]header{{"Last-Modified", "Wed, 21 Oct 2015 07:28:00"}, {"Date", ""}}, time.Time{}},
+		{[]header{{"Last-Modified", "Wed, 21 Oct 2015 07:28:00 GMT+03"}, {"Date", ""}}, time.Time{}},
+		{[]header{
+			{"Last-Modified", "Wed, 21 Oct 2015 07:28:00 GMT"},
+			{"Date", "Sun, 19 May 2019 09:05:00 UTC"},
+		},
+			time.Date(2015, 10, 21, 7, 28, 0, 0, tzone("GMT")),
+		},
+		{[]header{
+			{"Last-Modified", "Wed, 21 Oct 2015 07:28:00 GMT"},
+			{"Date", "Sun, 19 May 2019 09:05:00 GMT"},
+		},
+			time.Date(2015, 10, 21, 7, 28, 0, 0, tzone("GMT")),
+		},
+		{[]header{{"Last-Modified", ""}, {"Date", "Sun, 19 May 2019 09:05:00 UTC"}}, time.Time{}},
+		{[]header{
+			{"Last-Modified", ""},
+			{"Date", "Sun, 19 May 2019 09:05:00 GMT"},
+		},
+			time.Date(2019, 5, 19, 9, 5, 0, 0, tzone("GMT")),
+		},
+		{[]header{
+			{"Last-Modified", "2019-05-19 09:05:00 +0000 UTC"},
+			{"Date", "Sun, 19 May 2019 09:05:00 GMT"},
+		},
+			time.Date(2019, 5, 19, 9, 5, 0, 0, tzone("GMT")),
+		},
+	}
+
+	for _, c := range cases {
+		headers := http.Header{}
+		headers.Set("Server", "Apache/2.4.1 (Unix)")
+		headers.Set("Accept-Ranges", "bytes")
+		for _, h := range c.h {
+			headers.Set(h.name, h.value)
+		}
+		test.Log(c.h)
+		t := modifiedTime(headers)
+		if !c.expected.Equal(t) {
+			test.Error("Error, expected time:", c.expected, "actual:", t)
+		}
 	}
 }

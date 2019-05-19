@@ -31,7 +31,7 @@ func init() {
 	help := false
 	flag.BoolVar(&help, "h", false, "Print usage help.")
 	flag.UintVar(&numWorkers, "w", 1, "Number of allowed concurrent workers to build site map.")
-	flag.UintVar(&depth, "d", 0, "Maximum depth of link-junctions from start URL to render site map.")
+	flag.UintVar(&depth, "d", 1, "Maximum depth of link-junctions from start URL to render site map.")
 	flag.StringVar(&outputFile, "file", "sitemap.xml", "Write site map to given file.")
 
 	flag.Parse()

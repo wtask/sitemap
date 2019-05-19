@@ -34,7 +34,6 @@ func TestParser_worker(t *testing.T) {
 	}
 	actual := []string{}
 	for target := range c.targets {
-		// ignoring DocumentMetadata
 		actual = append(actual, target.URI.String())
 		if target.Level != level+1 {
 			t.Error("Unexpected level:", target.Level, "for URI:", target.URI.String())

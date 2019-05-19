@@ -1,8 +1,6 @@
 package sitemap
 
-import (
-	"time"
-)
+import "time"
 
 // Target - represents a link that corresponds to a specific level of hierarchy
 type Target struct {
@@ -10,16 +8,17 @@ type Target struct {
 	Level uint
 }
 
-// DocumentMetadata - metadata of fetched targets
-type DocumentMetadata struct {
-	Modified *time.Time
+// DocumentMeta - metadata of fetched targets
+type DocumentMeta struct {
+	// Modified - document modification time
+	Modified time.Time
 }
 
 // completedTarget - processed target data
 type completedTarget struct {
 	Target
 	err  error
-	meta *DocumentMetadata // task document metadata
+	meta *DocumentMeta // task document metadata
 	// errors <-chan error
 	targets <-chan Target
 }
@@ -27,5 +26,5 @@ type completedTarget struct {
 // MapItem - final result of site map
 type MapItem struct {
 	Target
-	*DocumentMetadata
+	*DocumentMeta
 }

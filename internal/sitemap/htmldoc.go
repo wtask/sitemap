@@ -14,7 +14,7 @@ import (
 
 // fetchDocument - build http GET request, fetch response body abd parse given HTML into document tree.
 // Only "text/html" content type is fetched.
-func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMetadata, error) {
+func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMeta, error) {
 	var cancel context.CancelFunc
 	defer func() {
 		if cancel != nil {
@@ -32,6 +32,7 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMetada
 	if err != nil {
 		return nil, nil, fmt.Errorf("preparing request to %q failed: %s", url, err)
 	}
+	req.Header.Set("Accept", "text/html")
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	defer func() {
 		if resp != nil {
@@ -58,21 +59,24 @@ func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMetada
 		return nil, nil, fmt.Errorf("unable to decode %q: %s", url, err)
 	}
 
-	var modified *time.Time
-	dt := resp.Header.Get("Last-Modified")
-	if dt == "" {
-		dt = resp.Header.Get("Date")
-	}
-	if t, err := http.ParseTime(dt); err == nil {
-		modified = &t
-	}
-	meta := &DocumentMetadata{
-		Modified: modified,
+	meta := &DocumentMeta{
+		Modified: modifiedTime(resp.Header),
 	}
 
 	doc, err := html.Parse(utf8)
 
 	return doc, meta, err
+}
+
+func modifiedTime(headers http.Header) time.Time {
+	for _, h := range []string{"Last-Modified", "Date"} {
+		if val := headers.Get(h); val != "" {
+			if t, err := http.ParseTime(val); err == nil {
+				return t
+			}
+		}
+	}
+	return time.Time{}
 }
 
 // firstNode - parses elements tree to find first node for given tag.
