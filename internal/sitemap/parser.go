@@ -101,15 +101,21 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 					defer func() {
 						atomic.AddInt64(&num.workers, -1)
 					}()
+					if _, ok := results.Load(target.URI.String()); ok {
+						// already have target, drop it
+						return
+					}
 					completed := p.worker(root, depth, target)
 					if completed.err != nil && p.errorCh != nil {
 						// TODO send error to parser errors channel
 					}
-					_, found := results.LoadOrStore(
+					// Do not check "loaded" result here,
+					// always send completed.targets into pending chan to prevent leak of background goroutines.
+					results.LoadOrStore(
 						completed.Target.URI.String(),
 						MapItem{completed.Target, completed.meta},
 					)
-					if !found && completed.targets != nil {
+					if completed.targets != nil {
 						pending <- completed.targets
 					}
 				}()
