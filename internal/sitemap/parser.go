@@ -105,11 +105,11 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 					if completed.err != nil && p.errorCh != nil {
 						// TODO send error to parser errors channel
 					}
-					results.LoadOrStore(
+					_, found := results.LoadOrStore(
 						completed.Target.URI.String(),
 						MapItem{completed.Target, completed.meta},
 					)
-					if completed.targets != nil {
+					if !found && completed.targets != nil {
 						pending <- completed.targets
 					}
 				}()
@@ -201,6 +201,7 @@ func (p *Parser) worker(root *URI, depth uint, t Target) completedTarget {
 			if url == nil {
 				continue
 			}
+			url.Fragment = "" // always drop fragment
 			link, _ := NewURI(url.String())
 			if err != nil {
 				continue
