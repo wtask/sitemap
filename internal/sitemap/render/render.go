@@ -49,10 +49,13 @@ func init() {
 	xml = template.Must(xml.New("index").Parse(xmlIndex))
 }
 
+// XMLMap - writes site map in XML format with given writer.
 func XMLMap(writer io.Writer, m []sitemap.MapItem) error {
 	return xml.Lookup("map").Execute(writer, m)
 }
 
+// XMLIndex - writes site map index in XML format with given writer.
+// Uses given modification time for every file URI. If this time is zero, it will be ignored.
 func XMLIndex(writer io.Writer, modified time.Time, fileURI []string) error {
 	data := struct {
 		Modified time.Time

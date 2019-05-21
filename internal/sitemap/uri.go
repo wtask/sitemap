@@ -33,6 +33,7 @@ func NewURI(raw string) (*URI, error) {
 	return &URI{u}, nil
 }
 
+// String - returns complete URI.
 func (u *URI) String() string {
 	if u == nil || u.URL == nil {
 		return ""
