@@ -25,6 +25,6 @@ type completedTarget struct {
 
 // MapItem - final result of site map
 type MapItem struct {
-	Target
+	*URI
 	*DocumentMeta
 }
