@@ -113,7 +113,7 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 					// always send completed.targets into pending chan to prevent leak of background goroutines.
 					results.LoadOrStore(
 						completed.Target.URI.String(),
-						MapItem{completed.Target, completed.meta},
+						MapItem{completed.Target.URI, completed.meta},
 					)
 					if completed.targets != nil {
 						pending <- completed.targets
