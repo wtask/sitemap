@@ -75,7 +75,7 @@ func NewParser(options ...parserOption) (*Parser, error) {
 	return p, nil
 }
 
-// Parse - takes root URI and max depth to parse all html documents available from root.
+// Parse - takes root URI and max depth to find all links inside html documents available from root.
 // TODO Add support to cancel parsing with help of context.Context
 func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 	// TODO resolve p == nil case
