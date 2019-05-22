@@ -9,13 +9,20 @@ import (
 	"github.com/wtask/sitemap/internal/sitemap"
 )
 
+const ()
+
 var (
-	startURL          *sitemap.URI
-	outputFile        string
-	numWorkers, depth uint
+	startURL                   *sitemap.URI
+	outputFormat               = "xml"
+	mapFilename, indexFilename string
+	outputDir                  string
+	numWorkers, depth          uint
 )
 
 func init() {
+
+	cwd, _ := os.Getwd()
+
 	usage := `Generate XML site map suggested by https://www.sitemaps.org/protocol.html, starting from given URI:
 
 	smgen [options] URI
@@ -32,7 +39,9 @@ func init() {
 	flag.BoolVar(&help, "h", false, "Print usage help.")
 	flag.UintVar(&numWorkers, "w", 1, "Number of allowed concurrent workers to build site map.")
 	flag.UintVar(&depth, "d", 1, "Maximum depth of link-junctions from start URL to render site map.")
-	flag.StringVar(&outputFile, "file", "sitemap.xml", "Write site map to given file.")
+	flag.StringVar(&mapFilename, "map", "sitemap", "File name for complete or partial site map.")
+	flag.StringVar(&indexFilename, "index", "sitemap_index", "File name for site map index if will be made several site maps.")
+	flag.StringVar(&outputDir, "dir", cwd, "Output directory where site map and index will be generated.")
 
 	flag.Parse()
 
@@ -52,7 +61,33 @@ func init() {
 		printUsage(flag.CommandLine.Output())
 		os.Exit(2)
 	}
-	var err error
+	if mapFilename == "" {
+		fmt.Fprint(flag.CommandLine.Output(), "Error: can not continue when site map filename is not specified.\n\n")
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+	if indexFilename == "" {
+		fmt.Fprint(flag.CommandLine.Output(), "Error: can not continue when site map index filename is not specified.\n\n")
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+	if outputDir == "" {
+		fmt.Fprint(flag.CommandLine.Output(), "Error: can not continue when output directory is not specified.\n\n")
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+	stat, err := os.Stat(outputDir)
+	if err != nil {
+		fmt.Fprintf(flag.CommandLine.Output(), "Unable to check output directory: %v.\n\n", err)
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+	if !stat.IsDir() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Can not use output directory: %s.\n\n", outputDir)
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+
 	startURL, err = sitemap.NewURI(start)
 	if err != nil {
 		fmt.Fprintf(flag.CommandLine.Output(), "Error: %v.\n\n", err)
