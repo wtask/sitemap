@@ -20,9 +20,8 @@ func TestParser_worker(t *testing.T) {
 		t.Fatal("Unexpected NewParser() error:", err)
 	}
 
-	var level uint
 	// fetch 0-level page and parse it links
-	c := parser.worker(root, 1, Target{root, level})
+	c := parser.worker(root, 1, Target{root, 0})
 
 	if c.targets == nil {
 		t.Fatal("Unexpected nil targets")
@@ -42,7 +41,7 @@ func TestParser_worker(t *testing.T) {
 	actual := []string{}
 	for target := range c.targets {
 		actual = append(actual, target.URI.String())
-		if target.Level != level+1 {
+		if target.Level != 1 {
 			t.Error("Unexpected level:", target.Level, "for URI:", target.URI.String())
 		}
 	}
