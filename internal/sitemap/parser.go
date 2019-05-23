@@ -12,7 +12,7 @@ import (
 
 // Parser - represent type to explore and build site map.
 type Parser struct {
-	errorCh        chan<- error  // optional
+	errorHandler   ErrorHandler  // async
 	requestTimeout time.Duration // optional
 	queueCap       uint
 }
@@ -23,6 +23,9 @@ const (
 	// DefaultQueueCap - default capacity of internal queue.
 	DefaultQueueCap uint = 1000
 )
+
+// ErrorHandler - func which should handle parsing error.
+type ErrorHandler func(error)
 
 type parserOption func(*Parser) error
 
@@ -47,10 +50,13 @@ func (p *Parser) setup(options ...parserOption) error {
 	return nil
 }
 
-// WithErrorChannel - add optional channel to send there parsing errors.
-func WithErrorChannel(errorCh chan<- error) parserOption {
+// WithErrorHandler - specify parsing error handler.
+// By default, all occurred errors are ignored.
+// Note: error handler will start inside own goroutine, which will silently recovered in case of panic.
+// Also the Parse method will wait for handlers are completed before returning results.
+func WithErrorHandler(h ErrorHandler) parserOption {
 	return func(p *Parser) error {
-		p.errorCh = errorCh
+		p.errorHandler = h
 		return nil
 	}
 }
@@ -91,6 +97,7 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 	results := sync.Map{}
 
 	num := struct{ workers, fillers int64 }{0, 0} // goroutines counters
+	eh := sync.WaitGroup{}
 
 	ensureWorkers := func() {
 		for i := atomic.LoadInt64(&num.workers); i < int64(workers); i++ {
@@ -106,8 +113,15 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 						return
 					}
 					completed := p.worker(root, depth, target)
-					if completed.err != nil && p.errorCh != nil {
-						// TODO send error to parser errors channel
+					if completed.err != nil && p.errorHandler != nil {
+						eh.Add(1)
+						go func() {
+							defer func() {
+								recover() // protect parser from handler panic
+								eh.Done()
+							}()
+							p.errorHandler(completed.err)
+						}()
 					}
 					// Do not check "loaded" result here,
 					// always send completed.targets into pending chan to prevent leak of background goroutines.
@@ -164,6 +178,8 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 		}
 		return true
 	})
+
+	eh.Wait()
 
 	return found
 }
