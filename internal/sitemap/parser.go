@@ -18,7 +18,7 @@ type Parser struct {
 }
 
 const (
-	// DefaultNumWorkers - default num of goroutines which fetchs and parses html documents.
+	// DefaultNumWorkers - default num of goroutines which fetches and parses html documents.
 	DefaultNumWorkers uint = 4
 	// DefaultQueueCap - default capacity of internal queue.
 	DefaultQueueCap uint = 1000
