@@ -39,8 +39,8 @@ func init() {
 	flag.BoolVar(&help, "h", false, "Print usage help.")
 	flag.UintVar(&numWorkers, "w", 1, "Number of allowed concurrent workers to build site map.")
 	flag.UintVar(&depth, "d", 1, "Maximum depth of link-junctions from start URL to render site map.")
-	flag.StringVar(&mapFilename, "map", "sitemap", "File name for complete or partial site map.")
-	flag.StringVar(&indexFilename, "index", "sitemap_index", "File name for site map index if will be made several site maps.")
+	flag.StringVar(&mapFilename, "map", "sitemap", "Site map FILE name [without ext].")
+	flag.StringVar(&indexFilename, "index", "sitemap_index", "Site map INDEX filename [without extension].")
 	flag.StringVar(&outputDir, "dir", cwd, "Output directory where site map and index will be generated.")
 
 	flag.Parse()

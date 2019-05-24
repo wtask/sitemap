@@ -21,11 +21,12 @@ const (
 func main() {
 	logger := log.New(os.Stdout, "smgen ", log.Ldate|log.Ltime)
 	logger.Printf(
-		"Started for %q, depth: %d, workers: %d, output format: %q\n",
+		"Started for %q, depth: %d, workers: %d, output format: %q, output dir: %s\n",
 		startURL.String(),
 		depth,
 		numWorkers,
 		outputFormat,
+		outputDir,
 	)
 
 	parser, err := sitemap.NewParser(
