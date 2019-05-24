@@ -94,5 +94,4 @@ func init() {
 		printUsage(flag.CommandLine.Output())
 		os.Exit(2)
 	}
-	fmt.Fprintf(flag.CommandLine.Output(), "%+v\n\n", startURL)
 }
