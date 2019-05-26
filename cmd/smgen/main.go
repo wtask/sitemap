@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 
 	"github.com/wtask/sitemap/internal/sitemap/render"
 
@@ -18,9 +17,15 @@ const (
 	MaxFileSize   = 50000 * 1024 * 1024 * 1024
 )
 
+type Logger interface {
+	Println(v ...interface{})
+	Printf(format string, v ...interface{})
+}
+
 func main() {
-	logger := log.New(os.Stdout, "smgen ", log.Ldate|log.Ltime)
-	logger.Printf(
+	var l Logger = log.New(os.Stdout, "smgen ", log.Ldate|log.Ltime)
+
+	l.Printf(
 		"Started for %q, depth: %d, workers: %d, output format: %q, output dir: %s\n",
 		startURL.String(),
 		depth,
@@ -31,71 +36,90 @@ func main() {
 
 	parser, err := sitemap.NewParser(
 		sitemap.WithErrorHandler(func(e error) {
-			logger.Println("Error:", e)
+			l.Println("ERR", e)
 		}),
 	)
 	if err != nil {
-		logger.Println("Parser can not be started:", err)
+		l.Println("Parser can not be started:", err)
 		os.Exit(1)
 	}
 
-	logger.Println("Parser has launched...")
+	l.Println("Parser has launched...")
 	m := parser.Parse(startURL, depth, numWorkers)
-	logger.Println("Completed, num of links found:", len(m))
+	l.Println("Completed, num of links found:", len(m))
 	if len(m) == 0 {
-		logger.Println("Stop on empty map")
+		l.Println("Stop on empty map")
 		return
 	}
 
-	// save map
-	numFiles, reminder := len(m)/MaxURIPerFile, len(m)%MaxURIPerFile
+	saver, err := buildMapSaver(outputFormat)
+	if err != nil {
+		l.Println("ERR", err)
+		os.Exit(1)
+	}
+
+	l.Println("Started saving site map...")
+	results := saveMap(m, MaxURIPerFile, mapFilename, outputFormat, outputDir, saver)
+	numErrors := 0
+	files := make([]string, len(results))
+	for file, err := range results {
+		if err != nil {
+			numErrors++
+			l.Println("ERR", file, err)
+		} else {
+			l.Println("OK", file)
+		}
+		files = append(files, file)
+	}
+	if numErrors > 0 {
+		l.Println("Done with error(s):", numErrors)
+		os.Exit(1)
+	}
+
+	// TODO Generate index if len(files) > 1 or filesize > MaxFileSize
+	
+	l.Println("All done")
+}
+
+// saveMap - asynchronously saves whole site map into files with no more than `itemsPerFile` in each.
+// Returns map of file names and errors if any occurred when file was saving.
+func saveMap(
+	m []sitemap.MapItem,
+	itemsPerFile int,
+	basename, extension, outputDir string,
+	saver func(filename string, chunk []sitemap.MapItem) error,
+) map[string]error {
+	numFiles, reminder := len(m)/itemsPerFile, len(m)%itemsPerFile
 	if reminder > 0 {
 		numFiles++
 	}
-	saver, err := buildMapSaver(outputFormat)
-	if err != nil {
-		logger.Println("Error:", err)
-		os.Exit(1)
-	}
-	logger.Println("Started saving site map...")
-	var (
-		wg        sync.WaitGroup
-		numErrors uint32
-		files     []string
-	)
-	files = make([]string, numFiles)
+	wg := sync.WaitGroup{}
+	mx := sync.Mutex{} // protects files
+	files := make(map[string]error, numFiles)
+	filename := fmt.Sprintf("%s.%s", mapFilename, outputFormat) // if single file only
 	for i := 0; i < numFiles; i++ {
-		filename := ""
 		if numFiles > 1 {
 			filename = fmt.Sprintf("%s%d.%s", mapFilename, i+1, outputFormat)
-		} else {
-			filename = fmt.Sprintf("%s.%s", mapFilename, outputFormat)
 		}
-		start := i * MaxURIPerFile
-		end := start + MaxURIPerFile
+		filename = filepath.Join(outputDir, filename)
+		start := i * itemsPerFile
+		end := start + itemsPerFile
 		if end > len(m) {
 			end = len(m)
 		}
-		files[i] = filepath.Join(outputDir, filename)
 		wg.Add(1)
-		go func(file string, m []sitemap.MapItem) {
+		go func(filename string, chunk []sitemap.MapItem) {
 			defer wg.Done()
-			if err := saver(file, m); err != nil {
-				atomic.AddUint32(&numErrors, 1)
-				logger.Println("Error:", err)
-			} else {
-				logger.Println("OK:", file)
-			}
-		}(files[i], m[start:end])
+			err := saver(filename, chunk)
+			mx.Lock()
+			files[filename] = err
+			mx.Unlock()
+		}(filename, m[start:end])
 	}
 
 	wg.Wait()
 
-	if numErrors > 0 {
-		logger.Println("Done with error(s):", numErrors)
-		os.Exit(1)
-	}
-	logger.Println("All done")
+	return files
 }
 
 func buildMapSaver(format string) (func(filename string, m []sitemap.MapItem) error, error) {
@@ -103,21 +127,22 @@ func buildMapSaver(format string) (func(filename string, m []sitemap.MapItem) er
 	case "xml":
 		return saveXML, nil
 	default:
-		return nil, fmt.Errorf("saving site map into %q is not supported", format)
+		return nil, fmt.Errorf("format %q is not supported", format)
 	}
 }
 
 func saveXML(filename string, m []sitemap.MapItem) error {
 	if len(m) == 0 {
-		return fmt.Errorf("site map is empty, nothing to save into %s", filename)
+		return fmt.Errorf("site map is empty")
 	}
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("can not open file %q: %s", filename, err)
+		return fmt.Errorf("can not open file: %s", err)
 	}
 	defer f.Close()
-	if err := render.XMLMap(f, m); err != nil {
-		return fmt.Errorf("render site map (%d) into XML failed: %s", len(m), err)
+	err = render.XMLMap(f, m)
+	if err != nil {
+		return fmt.Errorf("render site map (%d) as XML failed: %s", len(m), err)
 	}
 	return nil
 }
