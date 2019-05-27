@@ -17,6 +17,9 @@ const (
 	MaxFileSize   = 50000 * 1024 * 1024 * 1024
 )
 
+// MapSaver - func which saves a whole map or it part and returns size of file and error.
+type MapSaver func(filename string, chunk []sitemap.MapItem) (int64, error)
+
 type Logger interface {
 	Println(v ...interface{})
 	Printf(format string, v ...interface{})
@@ -77,7 +80,7 @@ func main() {
 	}
 
 	// TODO Generate index if len(files) > 1 or filesize > MaxFileSize
-	
+
 	l.Println("All done")
 }
 
@@ -87,7 +90,7 @@ func saveMap(
 	m []sitemap.MapItem,
 	itemsPerFile int,
 	basename, extension, outputDir string,
-	saver func(filename string, chunk []sitemap.MapItem) error,
+	saver MapSaver,
 ) map[string]error {
 	numFiles, reminder := len(m)/itemsPerFile, len(m)%itemsPerFile
 	if reminder > 0 {
@@ -122,7 +125,7 @@ func saveMap(
 	return files
 }
 
-func buildMapSaver(format string) (func(filename string, m []sitemap.MapItem) error, error) {
+func buildMapSaver(format string) (MapSaver, error) {
 	switch format {
 	case "xml":
 		return saveXML, nil
@@ -131,18 +134,24 @@ func buildMapSaver(format string) (func(filename string, m []sitemap.MapItem) er
 	}
 }
 
-func saveXML(filename string, m []sitemap.MapItem) error {
+func saveXML(filename string, m []sitemap.MapItem) (int64, error) {
+	var size int64
 	if len(m) == 0 {
-		return fmt.Errorf("site map is empty")
+		return size, fmt.Errorf("site map is empty")
 	}
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("can not open file: %s", err)
+		return size, fmt.Errorf("can not open file: %s", err)
 	}
 	defer f.Close()
 	err = render.XMLMap(f, m)
-	if err != nil {
-		return fmt.Errorf("render site map (%d) as XML failed: %s", len(m), err)
+	st, _ := f.Stat()
+	if st != nil {
+		size = st.Size()
 	}
-	return nil
+	// NOTE We can get file size with f.Stat()
+	if err != nil {
+		return size, fmt.Errorf("render site map (%d) as XML failed: %s", len(m), err)
+	}
+	return size, nil
 }

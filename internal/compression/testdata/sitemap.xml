@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<url>
+		<loc>http://localhost/</loc>
+	</url>
+	<url>
+		<loc>http://localhost/homepage.html</loc>
+		<lastmod>2019-05-21T23:26:00Z</lastmod>
+	</url>
+	<url>
+		<loc>http://localhost/protocol.html</loc>
+		<lastmod>2019-05-21T23:26:00+03:00</lastmod>
+	</url>
+	<url>
+		<loc>http://localhost/faq.html</loc>
+	</url>
+</urlset>
