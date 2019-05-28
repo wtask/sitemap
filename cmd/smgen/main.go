@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,8 +17,8 @@ import (
 )
 
 const (
-	MaxMapEntries     = 50000
-	MaxMapSizeBytes   = 50000 * 1024 * 1024
+	MaxMapEntries     = 3
+	MaxMapSizeBytes   = 100 // 50000 * 1024 * 1024
 	MaxIndexEntries   = MaxMapEntries
 	MaxIndexSizeBytes = MaxMapSizeBytes
 )
@@ -68,30 +69,33 @@ func main() {
 
 	l.Println("Started saving site map...")
 	numErrors := 0
-	files := []string{}
+	index := []string{}
 	for file, err := range saveMap(m, MaxMapEntries, MaxMapSizeBytes, mapFilename, outputFormat, outputDir, saver) {
 		if err != nil {
 			numErrors++
-			l.Println("ERR", "MAP", file, err)
+			l.Println("MAP", "ERR", file, err)
 		} else {
-			l.Printf("OK", "MAP", file)
+			l.Println("MAP", "OK", file)
 		}
-		files = append(files, file)
+		// index should contain URI, not local file names,
+		// we use startURL as base URI for map files links
+		rel, _ := url.Parse(filepath.Base(file))
+		index = append(index, startURL.ResolveReference(rel).String())
 	}
 	if numErrors > 0 {
 		l.Println("Map saving stage done with error(s):", numErrors)
 		os.Exit(1)
 	}
 
-	if len(files) > 1 {
+	if len(index) > 1 {
 		l.Println("Started saving index ...")
 		numErrors = 0
-		for file, err := range ensureIndex(files, MaxIndexEntries, MaxIndexSizeBytes, indexFilename, outputDir) {
+		for file, err := range ensureIndex(index, MaxIndexEntries, MaxIndexSizeBytes, indexFilename, outputDir) {
 			if err != nil {
 				numErrors++
-				l.Println("ERR", "INDEX", file, err)
+				l.Println("INDEX", "ERR", file, err)
 			} else {
-				l.Println("OK", "INDEX", file)
+				l.Println("INDEX", "OK", file)
 			}
 		}
 		if numErrors > 0 {
@@ -250,6 +254,7 @@ func ensureIndex(
 		wg.Add(1)
 		go func(filename string, chunk []string) {
 			defer wg.Done()
+
 			filesize, err := saveIndexXML(filename, chunk)
 			if err == nil && filesize > maxIndexSizeBytes {
 				if err = replaceWithGzip(filename, filename+".gzip"); err == nil {
