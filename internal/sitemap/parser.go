@@ -187,6 +187,8 @@ func (p *Parser) Parse(root *URI, depth, workers uint) []MapItem {
 // worker - fetches and parses target document.
 // Arguments `root` and `depth` are required to build absolute URI properly.
 func (p *Parser) worker(root *URI, depth uint, t Target) completedTarget {
+	// if an error occurred, the doc could still be partially exists,
+	// below we will check doc body
 	doc, meta, err := fetchDocument(t.URI, p.requestTimeout)
 
 	result := completedTarget{
@@ -224,7 +226,7 @@ func (p *Parser) worker(root *URI, depth uint, t Target) completedTarget {
 				continue
 			}
 			url.Fragment = "" // always drop fragment
-			link, _ := NewURI(url.String())
+			link, err := NewURI(url.String())
 			if err != nil {
 				continue
 			}

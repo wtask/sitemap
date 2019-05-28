@@ -39,7 +39,7 @@ func main() {
 
 	parser, err := sitemap.NewParser(
 		sitemap.WithErrorHandler(func(e error) {
-			l.Println("ERR", e)
+			l.Println("PARSER", "WRN", e)
 		}),
 	)
 	if err != nil {
