@@ -24,7 +24,7 @@ go version go1.12.5 windows/amd64
 
 At second, you must provide GOPATH environment variable and prepare underlying directory layout as specified at [GitHub Wiki](https://github.com/golang/go/wiki/GOPATH), but in two words you only must:
 
-* make custom base directory and set GOPATH with it
+* make custom base directory and set it path as GOPATH
 * make three sub-dirs under GOPATH: `bin`, `src` and `pkg`
 
 Then download a release from https://github.com/wtask/sitemap/releases into any local directory, decompress it, open console under `cmd/smgen` folder and run:
