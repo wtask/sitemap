@@ -5,15 +5,11 @@ This repo contains standalone, multi-threaded CLI application `smgen`, which bas
 ## smgen features
 
 * сross-platform application as well as Go
-* live parsing of all links from href-attributes of a-elements
+* extracting links only from href-attributes of a-elements
 * building maps and indexes in XML format only
-* auto-breaking results in chunks
+* auto-splitting results into chunks
 * auto-compressing results into gzip if needed
 * support only for `lastmod` tag for maps and indexes
-
-Current version supports map and index generation only in XML format. Maps and indexes are auto-breaking into chunks, according specification on https://www.sitemaps.org/protocol.html.
-
-Target files also will auto-compress into gzip if needed.
 
 ## Install/build `smgen` from source
 
