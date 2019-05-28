@@ -12,18 +12,35 @@ import (
 const ()
 
 var (
-	startURL                   *sitemap.URI
-	outputFormat               = "xml"
-	mapFilename, indexFilename string
-	outputDir                  string
-	numWorkers, depth          uint
+	// startURL - base URL from parser will start
+	startURL *sitemap.URI
+	// outputFormat - format for generating site map files;
+	// index will always be saved as XML
+	outputFormat = "xml"
+	// mapFilename - base name for site map file, used to generate final names
+	mapFilename,
+	// indexFilename - base name for site map index file, the same as for map
+	indexFilename,
+	// outputDir - absolute path to directory where all files will be generated
+	outputDir string
+	// numWorkers - number of concurrent work instances which fetches and parses html documents
+	numWorkers,
+	// depth - link fetching depth
+	depth uint
+	// limitFileSizeBytes - maximum size in bytes of any generated file,
+	// when file size is over this value, file is compressed into gzip
+	limitFileSizeBytes int64
+	// limitMapEntries - max number of entries per map file
+	limitMapEntries,
+	// limitIndexEntries - maximum number of entries per index file
+	limitIndexEntries int
 )
 
 func init() {
 
 	cwd, _ := os.Getwd()
 
-	usage := `Generate XML site map suggested by https://www.sitemaps.org/protocol.html, starting from given URI:
+	usage := `Generate site map suggested by https://www.sitemaps.org/protocol.html, starting from given URI:
 
 	smgen [options] URI
 
@@ -36,12 +53,21 @@ func init() {
 	}
 
 	help := false
-	flag.BoolVar(&help, "h", false, "Print usage help.")
-	flag.UintVar(&numWorkers, "w", 1, "Number of allowed concurrent workers to build site map.")
-	flag.UintVar(&depth, "d", 1, "Maximum depth of link-junctions from start URL to render site map.")
-	flag.StringVar(&mapFilename, "map", "sitemap", "Base name for site map FILE [w/o extension].")
-	flag.StringVar(&indexFilename, "index", "sitemap_index", "Base name for site map INDEX [w/o extension].")
-	flag.StringVar(&outputDir, "dir", cwd, "Output directory where site map and index will be generated.")
+	flag.BoolVar(&help, "h", false, "")
+	flag.BoolVar(&help, "help", false, "Print usage help.")
+	flag.UintVar(&numWorkers, "num-workers", 1, "Number of allowed concurrent workers to build site map.")
+	flag.UintVar(&depth, "depth", 1, "Maximum depth of link-junctions from start URL to render site map.")
+	flag.StringVar(&mapFilename, "map-name", "sitemap", "Base name for site map FILE.")
+	flag.StringVar(&indexFilename, "index-name", "sitemap_index", "Base name for site map INDEX.")
+	flag.StringVar(&outputDir, "output-dir", cwd, "Output directory where site map and index will be generated.")
+	flag.Int64Var(
+		&limitFileSizeBytes,
+		"size-limit",
+		50000*1024*1024,
+		"Maximum size of any generated file in bytes. If file size is greater than limitation, file is compressed into gzip.",
+	)
+	flag.IntVar(&limitMapEntries, "map-limit", 50000, "Limit number of entries per site map file.")
+	flag.IntVar(&limitIndexEntries, "index-limit", 50000, "Limit number of entries per index file.")
 
 	flag.Parse()
 
@@ -84,6 +110,21 @@ func init() {
 	}
 	if !stat.IsDir() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Can not use output directory: %s.\n\n", outputDir)
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+	if limitFileSizeBytes <= 0 {
+		fmt.Fprintf(flag.CommandLine.Output(), "Error: invalid file size limitation (%d)\n\n", limitFileSizeBytes)
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+	if limitMapEntries < 1 {
+		fmt.Fprintf(flag.CommandLine.Output(), "Error: invalid map entries limitation (%d)\n\n", limitMapEntries)
+		printUsage(flag.CommandLine.Output())
+		os.Exit(2)
+	}
+	if limitIndexEntries < 1 {
+		fmt.Fprintf(flag.CommandLine.Output(), "Error: invalid index entries limitation (%d)\n\n", limitIndexEntries)
 		printUsage(flag.CommandLine.Output())
 		os.Exit(2)
 	}

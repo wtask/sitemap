@@ -16,13 +16,6 @@ import (
 	"github.com/wtask/sitemap/internal/sitemap"
 )
 
-const (
-	MaxMapEntries     = 3
-	MaxMapSizeBytes   = 100 // 50000 * 1024 * 1024
-	MaxIndexEntries   = MaxMapEntries
-	MaxIndexSizeBytes = MaxMapSizeBytes
-)
-
 // mapSaver - func which saves a whole map or it part and returns size of file and error.
 type mapSaver func(filename string, chunk []sitemap.MapItem) (int64, error)
 
@@ -70,7 +63,15 @@ func main() {
 	l.Println("Started saving site map...")
 	numErrors := 0
 	index := []string{}
-	for file, err := range saveMap(m, MaxMapEntries, MaxMapSizeBytes, mapFilename, outputFormat, outputDir, saver) {
+	for file, err := range saveMap(
+		m,
+		limitMapEntries,
+		limitFileSizeBytes,
+		mapFilename,
+		outputFormat,
+		outputDir,
+		saver,
+	) {
 		if err != nil {
 			numErrors++
 			l.Println("MAP", "ERR", file, err)
@@ -90,7 +91,13 @@ func main() {
 	if len(index) > 1 {
 		l.Println("Started saving index ...")
 		numErrors = 0
-		for file, err := range ensureIndex(index, MaxIndexEntries, MaxIndexSizeBytes, indexFilename, outputDir) {
+		for file, err := range ensureIndex(
+			index,
+			limitIndexEntries,
+			limitFileSizeBytes,
+			indexFilename,
+			outputDir,
+		) {
 			if err != nil {
 				numErrors++
 				l.Println("INDEX", "ERR", file, err)
@@ -123,12 +130,12 @@ func replaceWithGzip(origin, gz string) error {
 // Returns the map of file names and errors if any occurred when file was saving or compressing.
 func saveMap(
 	m []sitemap.MapItem,
-	itemsPerFile int,
+	maxEntriesPerFile int,
 	maxFileSizeBytes int64,
 	basename, extension, outputDir string,
 	saver mapSaver,
 ) map[string]error {
-	numFiles, reminder := len(m)/itemsPerFile, len(m)%itemsPerFile
+	numFiles, reminder := len(m)/maxEntriesPerFile, len(m)%maxEntriesPerFile
 	if reminder > 0 {
 		numFiles++
 	}
@@ -140,8 +147,8 @@ func saveMap(
 		if numFiles > 1 {
 			filename = fmt.Sprintf("%s%d.%s", basename, i+1, extension)
 		}
-		start := i * itemsPerFile
-		end := start + itemsPerFile
+		start := i * maxEntriesPerFile
+		end := start + maxEntriesPerFile
 		if end > len(m) {
 			end = len(m)
 		}
@@ -205,9 +212,12 @@ func saveMapXML(filename string, m []sitemap.MapItem) (int64, error) {
 }
 
 // saveIndex - generate single map index and saves it in XML format.
-func saveIndexXML(filename string, mapFiles []string) (int64, error) {
+// Argument `filename` is absolute local file path to store index,
+// `mapLinks` - list of URIs, which are contained in index.
+// Every URI refers to single site map file.
+func saveIndexXML(filename string, mapLinks []string) (int64, error) {
 	var size int64
-	if len(mapFiles) == 0 {
+	if len(mapLinks) == 0 {
 		return 0, fmt.Errorf("list of map files is empty")
 	}
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
@@ -215,13 +225,13 @@ func saveIndexXML(filename string, mapFiles []string) (int64, error) {
 		return size, fmt.Errorf("can not open file: %s", err)
 	}
 	defer f.Close()
-	err = render.XMLIndex(f, time.Now().UTC(), mapFiles)
+	err = render.XMLIndex(f, time.Now().UTC(), mapLinks)
 	st, _ := f.Stat()
 	if st != nil {
 		size = st.Size()
 	}
 	if err != nil {
-		return size, fmt.Errorf("render site index (%d) failed: %s", len(mapFiles), err)
+		return size, fmt.Errorf("render site index (%d) failed: %s", len(mapLinks), err)
 	}
 
 	return size, nil
@@ -229,34 +239,37 @@ func saveIndexXML(filename string, mapFiles []string) (int64, error) {
 
 // ensureIndex - create a set of site map index files if needed.
 func ensureIndex(
-	filenames []string,
-	maxIndexEntries int,
-	maxIndexSizeBytes int64,
+	mapLinks []string,
+	maxEntriesPerFile int,
+	maxFileSizeBytes int64,
 	basename, outputDir string,
 ) map[string]error {
-	if len(filenames) <= 1 {
+	if len(mapLinks) <= 1 {
 		return nil
 	}
-	numFiles, reminder := len(filenames)/maxIndexEntries, len(filenames)%maxIndexEntries
+	numFiles, reminder := len(mapLinks)/maxEntriesPerFile, len(mapLinks)%maxEntriesPerFile
 	if reminder > 0 {
 		numFiles++
 	}
 	wg := sync.WaitGroup{}
 	mx := sync.Mutex{} // protects files
 	files := make(map[string]error, numFiles)
+	filename := fmt.Sprintf("%s.xml", basename)
 	for i := 0; i < numFiles; i++ {
-		filename := fmt.Sprintf("%s%d.xml", basename, i+1)
-		start := i * maxIndexEntries
-		end := start + maxIndexEntries
-		if end > len(filenames) {
-			end = len(filenames)
+		if numFiles > 1 {
+			filename = fmt.Sprintf("%s%d.xml", basename, i+1)
+		}
+		start := i * maxEntriesPerFile
+		end := start + maxEntriesPerFile
+		if end > len(mapLinks) {
+			end = len(mapLinks)
 		}
 		wg.Add(1)
 		go func(filename string, chunk []string) {
 			defer wg.Done()
 
 			filesize, err := saveIndexXML(filename, chunk)
-			if err == nil && filesize > maxIndexSizeBytes {
+			if err == nil && filesize > maxFileSizeBytes {
 				if err = replaceWithGzip(filename, filename+".gzip"); err == nil {
 					filename += ".gzip"
 				}
@@ -266,7 +279,7 @@ func ensureIndex(
 			mx.Unlock()
 		}(
 			filepath.Join(outputDir, filename),
-			filenames[start:end],
+			mapLinks[start:end],
 		)
 	}
 
