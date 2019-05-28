@@ -19,6 +19,7 @@ import (
 // mapSaver - func which saves a whole map or it part and returns size of file and error.
 type mapSaver func(filename string, chunk []sitemap.MapItem) (int64, error)
 
+// logger - internal logging interface with only used methods
 type logger interface {
 	Println(v ...interface{})
 	Printf(format string, v ...interface{})
