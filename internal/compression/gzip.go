@@ -9,10 +9,9 @@ import (
 )
 
 // Gzip - compress source data into gzip and write to target.
-// Returns number of read bytes from origin and error if it occurred.
 // Argument `origin` is a data source reader, `gz` - target gzip data writer,
 // `header` - optional header for gzip data.
-func Gzip(origin io.Reader, gz io.Writer, header *gzip.Header) (read int64, err error) {
+func Gzip(origin io.Reader, gz io.Writer, header *gzip.Header) (err error) {
 	gw := gzip.NewWriter(gz)
 	defer func() {
 		// flush compressed data and recheck error
@@ -21,30 +20,29 @@ func Gzip(origin io.Reader, gz io.Writer, header *gzip.Header) (read int64, err 
 	if header != nil {
 		gw.Header = *header
 	}
-	read, err = io.Copy(gw, origin)
+	_, err = io.Copy(gw, origin)
 	if err != nil {
-		return read, fmt.Errorf("compression.Gzip failed: %s", err)
+		return fmt.Errorf("compression.Gzip failed: %s", err)
 	}
-	return read, nil
+	return nil
 }
 
 // GzipFile - compress source data from origin file with gzip and save into new file.
-// Returns number of read bytes from source and error if it occurred.
 // Argument `origin` is a file name with source data,
 // `gz` is a whished file name of compression result.
-func GzipFile(origin, gz string) (read int64, err error) {
+func GzipFile(origin, gz string) error {
 	if origin == gz {
-		return 0, fmt.Errorf("compression.GzipFile: origin is the as gzip target")
+		return fmt.Errorf("compression.GzipFile: origin is the as gzip target")
 	}
 	source, err := os.OpenFile(origin, os.O_RDONLY, 0644)
 	if err != nil {
-		return 0, fmt.Errorf("compression.GzipFile, cannot open source: %s", err)
+		return fmt.Errorf("compression.GzipFile, cannot open source: %s", err)
 	}
 	defer source.Close()
 
 	target, err := os.OpenFile(gz, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
-		return 0, fmt.Errorf("compression.GzipFile, cannot open target: %s", err)
+		return fmt.Errorf("compression.GzipFile, cannot open target: %s", err)
 	}
 	defer target.Close()
 
@@ -52,26 +50,24 @@ func GzipFile(origin, gz string) (read int64, err error) {
 }
 
 // Ungzip - decompress gzip data from `gz` reader and write result into `origin` writer.
-// Returns number of read bytes from 'gz' and error if it was occurred.
-func Ungzip(gz io.Reader, origin io.Writer) (read int64, err error) {
+func Ungzip(gz io.Reader, origin io.Writer) error {
 	gr, err := gzip.NewReader(gz)
 	if err != nil {
-		return 0, fmt.Errorf("compression.Ungzip, cannot prepare gzip reader: %s", err)
+		return fmt.Errorf("compression.Ungzip, cannot prepare gzip reader: %s", err)
 	}
 	defer gr.Close()
-	read, err = io.Copy(origin, gr)
+	_, err = io.Copy(origin, gr)
 	if err != nil {
-		return read, fmt.Errorf("compression.Ungzip: cannot read gzip data: %s", err)
+		return fmt.Errorf("compression.Ungzip: cannot read gzip data: %s", err)
 	}
-	return read, nil
+	return nil
 }
 
 // UngzipFile - decompress gzip data from `gz` file and writes result into `origin` writer.
-// Returns number of read bytes from 'gz' and error if it was occurred.
-func UngzipFile(gz string, origin io.Writer) (read int64, err error) {
+func UngzipFile(gz string, origin io.Writer) error {
 	source, err := os.OpenFile(gz, os.O_RDONLY, 0644)
 	if err != nil {
-		return 0, fmt.Errorf("compression.UngzipFile, cannot open source: %s", err)
+		return fmt.Errorf("compression.UngzipFile, cannot open source: %s", err)
 	}
 	defer source.Close()
 

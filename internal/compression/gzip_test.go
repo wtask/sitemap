@@ -15,23 +15,27 @@ func TestGzipUngzip(test *testing.T) {
 	if err != nil {
 		test.Fatal("unable to load source file", err)
 	}
-
+ 
 	gzipFile := sourceFile + ".gzip"
-	read, err := GzipFile(sourceFile, gzipFile)
+	err = GzipFile(sourceFile, gzipFile)
 	defer os.Remove(gzipFile) // ignore error
 
 	if err != nil {
 		test.Error(err)
-	} else if read == 0 {
-		test.Error("Read zero bytes from non-empty source without error")
 	}
-
-	actual := bytes.Buffer{}
-	read, err = UngzipFile(gzipFile, &actual)
+	stat, err := os.Stat(gzipFile)
 	if err != nil {
 		test.Error(err)
-	} else if read == 0 {
-		test.Error("Read zero bytes from non-empty gzip without error")
+	} else if stat.Size() == 0 {
+		test.Error("Target gzip has zero size for non-empty source without error")
+	}	
+
+	actual := bytes.Buffer{}
+	err = UngzipFile(gzipFile, &actual)
+	if err != nil {
+		test.Error(err)
+	} else if actual.Len() == 0 {
+		test.Error("Buffer has zero size after for non-empty gzip without error")
 	}
 
 	if !reflect.DeepEqual(expected, actual.Bytes()) {
