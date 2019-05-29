@@ -9,8 +9,6 @@ import (
 	"github.com/wtask/sitemap/internal/sitemap"
 )
 
-const ()
-
 var (
 	// startURL - base URL from parser will start
 	startURL *sitemap.URI

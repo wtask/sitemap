@@ -20,9 +20,9 @@ $ go.exe version
 go version go1.12.5 windows/amd64
 ```
 
-> Extension `.exe` is only required if you use WSL console like me, but Go was installed on Windows, outside WSL.
+> Extension `.exe` is only required if you use WSL console like me, when Go was installed on Windows and outside WSL.
 
-At second, you must provide GOPATH environment variable and prepare underlying directory layout as specified at [GitHub Wiki](https://github.com/golang/go/wiki/GOPATH), but in two words you only must:
+At second, you must provide GOPATH environment variable and prepare underlying directory layout as specified at [GitHub Wiki](https://github.com/golang/go/wiki/GOPATH), but in two words:
 
 * make custom base directory and set it path as GOPATH
 * make three sub-dirs under GOPATH: `bin`, `src` and `pkg`
@@ -33,11 +33,13 @@ Then download a release from https://github.com/wtask/sitemap/releases into any 
 $ go.exe install
 ```
 
+> If you use Go older than 1.11 you must decompress app release into `GOPATH/src/wtask/sitemap` since the older Go versions does not support modules.
+
 CLI tool now should be installed under GOPATH `bin` subdirectory.
 
 ## Binary distribution
 
-Is not provided and is not planned.
+Not provided and not planned.
 
 ## Docker image distribution
 
