@@ -2,7 +2,7 @@
 
 This repo contains standalone, multi-threaded CLI application `smgen`, which based on html-parser written on Go to build site maps as suggested by [sitemaps.org](https://www.sitemaps.org/).
 
-## smgen features
+## `smgen` features
 
 * сross-platform application as well as Go
 * extracting links only from href-attributes of a-elements
