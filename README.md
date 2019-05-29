@@ -11,7 +11,7 @@ This repo contains standalone, multi-threaded CLI application `smgen`, which bas
 * auto-compressing results into gzip if needed
 * support only for `lastmod` tag for maps and indexes
 
-## Install/build `smgen` from source
+## Install `smgen` from source
 
 At first, you should install [Go language distribution](https://golang.org/dl/) and make sure Go is installed correctly:
 
@@ -20,20 +20,20 @@ $ go.exe version
 go version go1.12.5 windows/amd64
 ```
 
-> Extension `.exe` is only required if you use WSL console like me, when Go was installed on Windows and outside WSL.
+> Extension `.exe` is only required if you use WSL console like me, when Go was installed for Windows and outside WSL.
 
 At second, you must provide GOPATH environment variable and prepare underlying directory layout as specified at [GitHub Wiki](https://github.com/golang/go/wiki/GOPATH), but in two words:
 
 * make custom base directory and set it path as GOPATH
 * make three sub-dirs under GOPATH: `bin`, `src` and `pkg`
 
-Then download a release from https://github.com/wtask/sitemap/releases into any local directory, decompress it, open console under `cmd/smgen` folder and run:
+Then run:
 
 ```cli
-$ go.exe install
+$ go.exe install github.com/wtask/sitemap/cmd/smgen
 ```
 
-> If you use Go older than 1.11 you must decompress app release into `GOPATH/src/wtask/sitemap` since the older Go versions does not support modules.
+> You may need to install [git](https://git-scm.com/) also.
 
 CLI tool now should be installed under GOPATH `bin` subdirectory.
 
@@ -41,7 +41,7 @@ CLI tool now should be installed under GOPATH `bin` subdirectory.
 
 Not provided and not planned.
 
-## Docker image distribution
+## Docker image
 
 In the plans.
 
