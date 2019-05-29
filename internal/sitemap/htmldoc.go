@@ -12,7 +12,7 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-// fetchDocument - build http GET request, fetch response body abd parse given HTML into document tree.
+// fetchDocument - build http GET request, fetch response body and parse given HTML into document tree.
 // Only "text/html" content type is fetched.
 func fetchDocument(uri *URI, timeout time.Duration) (*html.Node, *DocumentMeta, error) {
 	var cancel context.CancelFunc
