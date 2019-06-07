@@ -54,10 +54,10 @@ Or you may build docker image by yourself and run CLI-tool container as follows:
 docker build --no-cache -f ./cmd/smgen/.Dockerfile -t smgen .
 ```
 
-3. Run container, for example, as:
+3. Run container as:
 
 ```cli
-docker run -it --rm -v "{your-local-dir}":/data wtask/smgen -depth={desired-depth} -num-workers={desired-num} {desired-URI}
+docker run -it --rm -v "{your-local-dir}":/data smgen -depth={desired-depth} -num-workers={desired-num} {desired-URI}
 ```
 
 >`{your-local-dir}` is absolute path to the directory where to save XML-sitemap and index;
