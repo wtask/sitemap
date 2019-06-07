@@ -12,15 +12,20 @@ ENV \
 WORKDIR /src
 COPY ./ ./
 
-RUN go mod download \
+RUN	update-ca-certificates --fresh \
+	&& go mod tidy \
+	&& go mod download \
 	&& mkdir /build \
 	&& go build -a -ldflags '-extldflags "-static"' -o /build/smgen ./cmd/smgen/.
 
 FROM scratch
-WORKDIR /app
-COPY --from=builder /build/smgen ./
+# Import the Certificate-Authority certificates for enabling HTTPS.
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# copy application binary
+COPY --from=builder /build/smgen ./app/
+
 WORKDIR /data
-VOLUME [ "/data" ]
+VOLUME /data
 
 ENTRYPOINT [ "/app/smgen" ]
-CMD ["-output-dir=/data", "-num-workers=4"]
+CMD ["-output-dir=/data"]
