@@ -43,7 +43,26 @@ Not provided and not planned.
 
 ## Docker image
 
-In the plans.
+You can use ready to run docker image from https://hub.docker.com/r/wtask/smgen to test `smgen` tool.
+
+Or you may build docker image by yourself and run CLI-tool container as follows:
+
+1. Clone or download this repository or release.
+2. Jump into repository or release folder and build image:
+
+```cli
+docker build --no-cache -f ./cmd/smgen/.Dockerfile -t smgen .
+```
+
+3. Run container, for example, as:
+
+```cli
+docker run -it --rm -v "{your-local-dir}":/data wtask/smgen -depth={desired-depth} -num-workers={desired-num} {desired-URI}
+```
+
+>`{your-local-dir}` is absolute path to the directory where to save XML-sitemap and index;
+>
+>`{desired-depth}`, `{desired-num}`, `{desired-URI}` are CLI-tool argument values.
 
 ## Usage
 
