@@ -10,8 +10,17 @@ ENV \
 	GOARCH=amd64
 
 WORKDIR /src
-VOLUME /src
+COPY ./ ./
 
 RUN go mod download \
-	&& mkdir /app \
-	&& go build -a -ldflags '-extldflags "-static"' -o /app/smgen ./cmd/smgen/.
+	&& mkdir /build \
+	&& go build -a -ldflags '-extldflags "-static"' -o /build/smgen ./cmd/smgen/.
+
+FROM scratch
+WORKDIR /app
+COPY --from=builder /build/smgen ./
+WORKDIR /data
+VOLUME [ "/data" ]
+
+ENTRYPOINT [ "/app/smgen" ]
+CMD ["-output-dir=/data", "-num-workers=4"]
