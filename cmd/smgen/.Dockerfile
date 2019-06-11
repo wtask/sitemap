@@ -19,6 +19,9 @@ RUN	update-ca-certificates --fresh \
 	&& go build -a -ldflags '-extldflags "-static"' -o /build/smgen ./cmd/smgen/.
 
 FROM scratch
+
+USER smgen
+
 # Import the Certificate-Authority certificates for enabling HTTPS.
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # copy application binary
