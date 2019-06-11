@@ -1,8 +1,6 @@
 # Distribute smgen as docker image
 FROM golang:1.12 as builder
 
-LABEL maintainer="<Mike Mikhaylov, webtask@gmail.com>"
-
 ENV \
 	# golang env
 	CGO_ENABLED=0 \
@@ -20,6 +18,8 @@ RUN	update-ca-certificates --fresh \
 	&& go build -a -ldflags '-extldflags "-static"' -o /build/smgen ./cmd/smgen/.
 
 FROM scratch
+LABEL maintainer="<Mike Mikhaylov, webtask@gmail.com>"
+
 # import user accounts 
 COPY --from=builder /etc/group /etc/passwd /etc/
 # import the Certificate-Authority certificates for enabling HTTPS.
